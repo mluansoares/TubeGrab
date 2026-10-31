@@ -1,0 +1,7 @@
+node_modules/
+bin/
+storage/
+data/
+logs/
+.env
+cookies.txt

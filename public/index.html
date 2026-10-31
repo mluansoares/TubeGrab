@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070811">
+<meta name="description" content="Baixe vídeos e áudios do YouTube por link, direto no seu computador.">
+<title>TubeGrab — YouTube para o seu computador</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff3b5c'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Cpath d='M26 20l18 12-18 12z' fill='white'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <span class="blob blob-1"></span>
+  <span class="blob blob-2"></span>
+  <span class="blob blob-3"></span>
+  <span class="grid"></span>
+</div>
+
+<header class="topbar">
+  <a class="brand" href="/" aria-label="TubeGrab, início">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 7.5v9l7.5-4.5L9 7.5z" fill="currentColor"/></svg>
+    </span>
+    <span class="brand-text">
+      <strong>TubeGrab</strong>
+      <small>youtube → arquivo</small>
+    </span>
+  </a>
+  <nav class="top-actions">
+    <button id="diagBtn" class="ghost-btn" type="button" title="Testar a conexão com o YouTube">
+      <span class="status-dot" id="healthDot" data-state="wait"></span>
+      <span id="healthText">verificando…</span>
+    </button>
+    <a class="ghost-btn" href="#downloads">Downloads</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow"><span class="spark" aria-hidden="true"></span> vídeo ou áudio, sem complicação</p>
+    <h1>Cole o link.<br><span class="grad">Escolha o formato.</span> Pronto.</h1>
+    <p class="lede">Baixe vídeos do YouTube em MP4 ou só o áudio em MP3, direto para o seu computador. Sem cadastro, sem nuvem, sem enrolação.</p>
+
+    <form id="linkForm" class="link-card" autocomplete="off" novalidate>
+      <div class="input-wrap">
+        <svg class="yt-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor" opacity=".18"/>
+          <path d="M10 9l5 3-5 3V9z" fill="currentColor"/>
+        </svg>
+        <input id="urlInput" name="url" type="text" inputmode="url" spellcheck="false"
+               placeholder="Cole o link do vídeo aqui…" aria-label="Link do vídeo do YouTube" autofocus>
+        <button id="pasteBtn" class="paste-btn" type="button">Colar</button>
+      </div>
+      <button id="analyzeBtn" class="primary-btn" type="submit">
+        <span class="btn-label">Analisar</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+    <p class="hint">Funciona com youtube.com, youtu.be, Shorts e o ID do vídeo.</p>
+
+    <div id="errorBox" class="alert hidden" role="alert">
+      <span class="alert-icon" aria-hidden="true">!</span>
+      <div class="alert-body">
+        <strong id="errorTitle">Não deu certo</strong>
+        <p id="errorMessage"></p>
+        <small id="errorDetail" class="hidden"></small>
+      </div>
+      <button id="errorClose" class="alert-close" type="button" aria-label="Fechar aviso">×</button>
+    </div>
+  </section>
+
+  <section id="skeleton" class="card skeleton-card hidden" aria-hidden="true">
+    <div class="skeleton skeleton-thumb"></div>
+    <div class="skeleton-lines">
+      <div class="skeleton skeleton-line w40"></div>
+      <div class="skeleton skeleton-line w80"></div>
+      <div class="skeleton skeleton-line w60"></div>
+      <div class="skeleton-row">
+        <div class="skeleton skeleton-pill"></div>
+        <div class="skeleton skeleton-pill"></div>
+        <div class="skeleton skeleton-pill"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="result" class="card result hidden" aria-live="polite"></section>
+
+  <section id="downloads" class="downloads" aria-labelledby="downloadsTitle">
+    <div class="section-head">
+      <div>
+        <h2 id="downloadsTitle">Seus downloads</h2>
+        <p id="queueLine" class="section-sub">Tudo o que você baixou fica aqui.</p>
+      </div>
+      <button id="refreshBtn" class="icon-btn" type="button" title="Atualizar lista" aria-label="Atualizar lista">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 5v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div id="jobsList" class="jobs"></div>
+
+    <div id="emptyState" class="empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <strong>Nada por aqui ainda</strong>
+      <p>Cole um link acima e o vídeo aparece nesta lista.</p>
+    </div>
+  </section>
+
+  <section class="facts" aria-label="Informações">
+    <article class="fact">
+      <span class="fact-k">Onde ficam os arquivos</span>
+      <span class="fact-v" id="factPath">storage/videos</span>
+    </article>
+    <article class="fact">
+      <span class="fact-k">Limpeza automática</span>
+      <span class="fact-v" id="factRetention">7 dias</span>
+    </article>
+    <article class="fact">
+      <span class="fact-k">Limites</span>
+      <span class="fact-v" id="factLimits">180 min · 4 GB</span>
+    </article>
+    <article class="fact">
+      <span class="fact-k">Espaço livre</span>
+      <span class="fact-v" id="factDisk">—</span>
+    </article>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>Baixe apenas conteúdo que você tem o direito de usar — seu, Creative Commons, domínio público ou com autorização do autor.</p>
+  <p class="muted" id="footStats">TubeGrab roda no seu computador. Nenhum arquivo sai daqui.</p>
+</footer>
+
+<div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Prévia do arquivo">
+  <div class="modal-card">
+    <button id="modalClose" class="modal-close" type="button" aria-label="Fechar">×</button>
+    <div id="modalPlayer" class="modal-player"></div>
+    <div class="modal-meta">
+      <strong id="modalTitle"></strong>
+      <span id="modalSub" class="muted"></span>
+    </div>
+  </div>
+</div>
+
+<div id="lock" class="lock hidden" role="dialog" aria-modal="true" aria-label="Token de acesso">
+  <form id="lockForm" class="lock-card">
+    <span class="logo big" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 7.5v9l7.5-4.5L9 7.5z" fill="currentColor"/></svg>
+    </span>
+    <h2>Servidor protegido</h2>
+    <p class="muted">Este TubeGrab está configurado com um token. Informe-o para continuar.</p>
+    <input id="lockInput" type="password" placeholder="Token de acesso" autocomplete="current-password" aria-label="Token de acesso">
+    <button class="primary-btn" type="submit">Entrar</button>
+  </form>
+</div>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>
