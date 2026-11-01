@@ -45,6 +45,22 @@ Abra **http://localhost:3100**.
 
 No dia a dia, só `npm start` é necessário.
 
+### Windows: duplo clique (sem terminal)
+
+Na raiz do projeto fica **`TubeGrab.lnk`** — o único arquivo do launcher que você precisa ver. Ele aponta para **`launcher\TubeGrab.bat`**, que guarda o script e o ícone (`launcher\TubeGrab.ico`). Um duplo clique faz tudo:
+
+1. confere Node.js e npm (se faltar — ou se for anterior ao 22.5 — instala o LTS via `winget`, com fallback para o instalador oficial do nodejs.org);
+2. roda `npm install` se as dependências ainda não estiverem em `node_modules/`;
+3. roda `npm run setup` se faltar `yt-dlp`, `ffmpeg` ou `ffprobe` em `bin/`;
+4. sobe o servidor com `npm start`;
+5. abre o navegador padrão em `http://localhost:<PORT>` assim que a porta responde.
+
+O script roda sempre a partir da raiz do projeto (`cd /d "%~dp0.."`), então `node_modules/`, `bin/` e `.env` são encontrados mesmo estando em `launcher/`.
+
+A porta sai do `.env` (`3100` se o arquivo não existir). Se o app já estiver rodando, o script apenas abre o navegador em vez de subir uma segunda instância. A espera pela porta roda em segundo plano, então o `npm start` não fica bloqueado.
+
+> No Windows um `.bat` não aceita ícone embutido: quem mostra o `TubeGrab.ico` é o atalho `TubeGrab.lnk`. Se o Explorer insistir no ícone genérico, tecle **F5** na pasta ou rode `ie4uinit.exe -show` para limpar o cache. O `.lnk` guarda caminho absoluto — se mover a pasta, recrie o atalho ou execute `launcher\TubeGrab.bat` direto.
+
 ## Uso
 
 1. Cole o link do vídeo (aceita `youtube.com/watch`, `youtu.be`, `Shorts`, `live`, `embed` e o ID de 11 caracteres).
@@ -99,6 +115,7 @@ O navegador vai pedir o token uma vez e guardá-lo. Sem `ACCESS_TOKEN`, qualquer
 | `npm run setup` | Baixa/verifica `yt-dlp` e `ffmpeg` em `bin/`. |
 | `npm run update:ytdlp` | Atualiza só o `yt-dlp`. |
 | `npm test` | Roda os testes unitários. |
+| `launcher\TubeGrab.bat` | Windows: faz os passos de instalação/atualização e sobe o app com um duplo clique (`TubeGrab.lnk`, na raiz, é o atalho com ícone). |
 
 ---
 
@@ -113,6 +130,8 @@ src/ytdlp.js     wrapper do yt-dlp: metadados, download, erros humanos
 src/db.js        SQLite nativo do Node (node:sqlite), sem dependência nativa
 src/urls.js      validação estrita de links e nomes de arquivo seguros
 scripts/         download dos binários
+launcher/        TubeGrab.bat + TubeGrab.ico (o atalho aponta para cá)
+TubeGrab.lnk     atalho na raiz, com ícone, que executa o launcher (não versionado)
 bin/             yt-dlp, ffmpeg, ffprobe (não versionado)
 storage/videos/  arquivos baixados (não versionado)
 data/            banco SQLite (não versionado)
