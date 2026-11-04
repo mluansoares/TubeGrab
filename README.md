@@ -30,6 +30,8 @@ Cole o link  →  escolha a qualidade  →  baixe
 
 O app baixa sozinho o `yt-dlp` e o `ffmpeg` — você não precisa instalar nada além do Node.
 
+> No Windows, o **`TubeGrab.exe`** cuida do Node e dos binários por você (veja *Windows: um clique* abaixo). Os requisitos acima valem para o fluxo manual com `npm`.
+
 ---
 
 ## Instalação
@@ -47,21 +49,47 @@ No dia a dia, só `npm start` é necessário.
 
 ### Windows: um clique (sem terminal)
 
-Na raiz do projeto fica **`TubeGrab.exe`** — é o ponto de entrada. Um duplo clique faz tudo:
+Na raiz do projeto fica **`TubeGrab.exe`** — é o único arquivo em que você precisa clicar. Ele é um launcher fino (~20 KB): não contém a lógica do app, apenas abre `launcher\TubeGrab.bat` do mesmo jeito que um duplo clique abriria.
 
-1. confere Node.js e npm (se faltar — ou se for anterior ao 22.5 — instala o LTS via `winget`, com fallback para o instalador oficial do nodejs.org);
-2. roda `npm install` se as dependências ainda não estiverem em `node_modules/`;
-3. roda `npm run setup` se faltar `yt-dlp`, `ffmpeg` ou `ffprobe` em `bin/`;
-4. sobe o servidor com `npm start`;
-5. abre o navegador padrão em `http://localhost:<PORT>` assim que a porta responde.
+```
+TubeGrab.exe
+   └─ launcher\TubeGrab.bat
+        ├─ 1. Node.js + npm          (instala o LTS se faltar ou for antigo)
+        ├─ 2. node_modules\          (npm install se faltar)
+        ├─ 3. bin\yt-dlp + ffmpeg    (npm run setup se faltar — ~130 MB)
+        ├─ 4. npm start              (servidor em http://127.0.0.1:<PORT>)
+        └─ 5. navegador padrão       (abre quando a porta responde)
+```
 
-O `.exe` é um launcher fino (~20 KB): não duplica lógica, apenas abre **`launcher\TubeGrab.bat`** via ShellExecute — exatamente o que um duplo clique no `.bat` faria. O script faz `cd /d "%~dp0.."`, então `node_modules/`, `bin/` e `.env` são encontrados mesmo ele estando em `launcher/`. O ícone e os metadados (produto/versão) estão embutidos no binário e não há caminho absoluto: o repositório funciona em qualquer pasta. Se o `.bat` não estiver ao lado, o `.exe` mostra um aviso e sai com código 1.
+#### Primeira execução
 
-O `.bat` continua executável sozinho — útil em servidor/CI ou se o `.exe` for bloqueado por política de máquina.
+1. Baixe o projeto **inteiro**: `git clone` (recomendado) ou **Code → Download ZIP**. Se for ZIP, extraia a pasta antes; não execute de dentro do `.zip` e não mova só o `.exe`.
+2. Duplo clique em **`TubeGrab.exe`**.
+3. Uma janela de console abre e mostra o progresso:
+   - `[1/4]` Node.js e npm — se faltar (ou for anterior ao 22.5), tenta instalar o LTS via `winget` e, se não der, baixa o instalador oficial do nodejs.org;
+   - `[2/4]` dependências do projeto — `npm install` só na primeira vez;
+   - `[3/4]` `yt-dlp` + `ffmpeg` — `npm run setup` baixa ~130 MB na primeira vez (pode levar alguns minutos);
+   - `[4/4]` servidor — `npm start` e abertura do navegador.
+4. Quando aparecer `TubeGrab no ar → http://localhost:<PORT>`, a aba já deve estar aberta. Se não estiver, abra o endereço na mão.
+5. **Deixe o console aberto** — é ele que mantém o servidor rodando. Fechar a janela encerra o app.
 
-A porta sai do `.env` (`3100` se o arquivo não existir). Se o app já estiver rodando, o script apenas abre o navegador em vez de subir uma segunda instância. A espera pela porta roda em segundo plano, então o `npm start` não fica bloqueado.
+Nas próximas vezes é o mesmo duplo clique. Se o app já estiver rodando na mesma porta, o script avisa `o TubeGrab ja esta rodando na porta 3100` e só abre a aba, sem subir uma segunda instância.
 
-#### Antivírus, SmartScreen e como recompilar
+A porta vem do `.env` (padrão `3100`). A partir da segunda execução o console mostra `ok - ja instaladas` e `ok - ja instalados` — é o caminho normal, sem download nenhum.
+
+> Requisitos: Windows 10/11 (o .NET Framework 4 já vem no sistema). Não precisa de Visual Studio nem de SDK. Conexão com a internet é necessária na primeira vez.
+
+#### O que mudou: por que não existe mais `TubeGrab.lnk`
+
+O atalho `.lnk` antigo foi aposentado porque **não é versionável**: ele guarda o caminho absoluto (`G:\...\launcher\TubeGrab.bat`) e o serial do volume de origem dentro do binário. Quem clonasse o repositório em outra pasta receberia um atalho apontando para um caminho inexistente.
+
+O `TubeGrab.exe` resolve isso: o ícone e os metadados (`TubeGrab`, versão `1.0.0.0`) estão **embutidos no executável**, e o caminho do `.bat` é calculado em tempo de execução a partir da pasta onde o `.exe` está. Não há caminho absoluto gravado, então o projeto funciona em qualquer diretório.
+
+O `launcher\TubeGrab.bat` continua no repositório e **funciona sozinho**, sem o `.exe` — útil se o executável for bloqueado por política de máquina ou se você preferir rodar num terminal.
+
+> **Já usava o projeto?** Depois do `git pull` (ou de copiar os arquivos novos), o `TubeGrab.exe` aparece na raiz. O `TubeGrab.lnk` antigo pode ser apagado da pasta. Atalhos na Área de Trabalho que apontavam para o `.lnk` param de funcionar — recrie-os apontando para `TubeGrab.exe`. Nada mais muda: `.env`, `node_modules/`, `bin/`, `storage/` e `data/` continuam iguais.
+
+#### Antivírus, SmartScreen e o binário
 
 O binário é gerado a partir de `launcher\TubeGrabLauncher.cs` (código aberto, ~40 linhas) e é commitado junto do script de build. Não há ofuscação, empacotamento, janela oculta nem comando montado em string — justamente o que costuma disparar heurísticas. Ainda assim:
 
@@ -70,12 +98,6 @@ O binário é gerado a partir de `launcher\TubeGrabLauncher.cs` (código aberto,
 - Um antivírus pode implicar com qualquer `.exe` pequeno e não assinado. Se acontecer, use `launcher\TubeGrab.bat` (mesmo comportamento) ou adicione uma exclusão para a pasta do projeto.
 - Binário **não assinado**: não há certificado de code signing. Assinar resolveria o SmartScreen, mas exige certificado pago.
 
-Para recompilar (não precisa de SDK, Visual Studio nem internet — usa o `csc.exe` do .NET Framework que já vem no Windows 10/11):
-
-```bat
-powershell -ExecutionPolicy Bypass -File launcher\build-exe.ps1
-```
-
 Para auditar o binário commitado:
 
 ```
@@ -83,7 +105,99 @@ SHA-256  4D98A0280C9F51A494ED2B84ED688D1B0029118CE450BEFDD04A43C5EDC36815
 tamanho  19.968 bytes
 ```
 
+Confira na sua máquina com:
+
+```powershell
+Get-FileHash .\TubeGrab.exe -Algorithm SHA256
+```
+
 > Esse hash vale para o binário atual do repositório. Se você recompilar, o seu será diferente — o script imprime o resultado. Dá para conferir o hash publicado aqui com o do seu arquivo (ou enviá-lo ao VirusTotal) antes de executar.
+
+Para recompilar (não precisa de SDK, Visual Studio nem internet — usa o `csc.exe` do .NET Framework que já vem no Windows 10/11):
+
+```bat
+powershell -ExecutionPolicy Bypass -File launcher\build-exe.ps1
+```
+
+O script recria o `TubeGrab.exe` na raiz com o ícone e os metadados. Se der certo, termina com `ok - TubeGrab.exe (... bytes)`.
+
+#### Se o executável não funcionar
+
+| Sintoma | Causa provável | Vá para |
+|---|---|---|
+| Nada acontece no duplo clique | SmartScreen ou política de execução bloqueando | 1 |
+| "O Windows protegeu o computador" | *Mark of the Web* (ZIP) ou reputação | 1 |
+| Antivírus apaga ou põe em quarentena | heurística em `.exe` não assinado | 2 |
+| Caixa "Nao encontrei launcher\TubeGrab.bat" | `.exe` fora da raiz ou ZIP extraído pela metade | 3 |
+| Console abre e fecha na hora | o `.bat` nem chegou a rodar (bloqueio/política) | 4 |
+| Console para em `[1/4]`, `[2/4]` ou `[3/4]` | Node, rede/proxy ou disco | 5 |
+| Servidor no ar, navegador não abre | porta diferente ou navegador sem associação | 6 |
+| `EADDRINUSE` / porta ocupada | instância anterior ainda rodando | 7 |
+| `.exe` sumiu, corrompeu ou nada resolve | — | 8 |
+
+**1. SmartScreen ou "Windows protegeu o computador".**
+Clique em **Mais informações → Executar assim mesmo**. Se o botão não existir, clique com o botão direito no `TubeGrab.exe` → **Propriedades** → marque **Desbloquear** → **Aplicar**. No PowerShell, o equivalente é:
+
+```powershell
+Unblock-File .\TubeGrab.exe
+```
+
+Se o Windows não oferecer nenhuma dessas opções, é política da máquina (AppLocker/antivírus corporativo): use o item 2 ou o 4.
+
+**2. O antivírus bloqueou, apagou ou colocou em quarentena.**
+Abra o histórico/quarentena do antivírus, restaure o arquivo e adicione uma exclusão para a pasta do projeto. Antes de liberar, confira o hash (seção acima) e, se quiser, envie o arquivo ao VirusTotal. Você também pode simplesmente **não usar o `.exe`**: `launcher\TubeGrab.bat` faz exatamente a mesma coisa. Não baixe uma "versão corrigida" de outro lugar.
+
+**3. Apareceu "Nao encontrei launcher\TubeGrab.bat".**
+O `.exe` precisa estar na raiz do projeto, ao lado de `package.json`, `README.md` e da pasta `launcher\`. Causas comuns: mover só o `.exe` para a Área de Trabalho, extrair o ZIP pela metade ou renomear a pasta `launcher`. Volte o arquivo para a raiz e mantenha a estrutura.
+
+**4. O console abre e fecha na hora (ou nem abre).**
+Se o `.bat` rodasse e falhasse, ele pararia em `pause` com a mensagem na tela — fechar na hora geralmente significa que ele nem foi executado (bloqueio do `.exe`/do `.bat`). Rode o `.bat` num terminal para ver o que acontece. Abra o Prompt/PowerShell **na pasta do projeto** e execute:
+
+```bat
+launcher\TubeGrab.bat
+```
+
+Se a janela fechar rápido demais, use `cmd /k launcher\TubeGrab.bat`. A mensagem que aparecer é a causa; os casos mais comuns estão nos itens 5 e 7. Se o console mostrar os passos e terminar em `Servidor encerrado`, o `npm start` falhou — o erro está nas linhas acima. Se nem o `.bat` rodar, tente o fluxo manual (item 8) — `npm start` não depende de nada do launcher.
+
+**5. Erro durante os passos do console.**
+
+- `[1/4]` **"Node.js nao ficou disponivel neste console"** — a instalação automática falhou. Instale o **LTS** em [nodejs.org](https://nodejs.org), feche o console, abra de novo e confirme com `node -v` (precisa ser 22.5 ou superior).
+- `[2/4]` **falha no `npm install`** — rede, proxy ou antivírus. Rode `npm install` na raiz para ver o erro completo; atrás de proxy, configure `npm config set proxy http://...`.
+- `[3/4]` **falha no `npm run setup`** — são ~130 MB. Confira disco e internet e rode de novo; o script retoma o que faltou.
+- `[4/4]` **erro do Node** — se for `EADDRINUSE`, veja o item 7. Se mencionar `node:sqlite`, seu Node é antigo: atualize para 22.5+.
+- O console **permanece aberto** com a mensagem: copie as últimas linhas antes de pedir ajuda.
+
+**6. O servidor sobe, mas o navegador não abre.**
+Abra `http://localhost:3100` (ou a porta do seu `.env`) manualmente. O launcher espera a porta do servidor por até ~60 s; se ela não responder nesse prazo, ele desiste de abrir o navegador. Confira também se existe um navegador padrão associado a links `http://` (Configurações → Aplicativos → Aplicativos padrão) e teste com `start "" http://localhost:3100` no `cmd`.
+
+Se você usa `HOST=0.0.0.0` para acessar de outro aparelho, permita o Node no firewall do Windows (redes privadas) — o bloqueio afeta o acesso externo, não o `localhost`.
+
+**7. Porta ocupada (`EADDRINUSE`).**
+Feche o console antigo do TubeGrab. Se não souber qual é, descubra o processo e encerre:
+
+```bat
+netstat -ano | findstr :3100
+taskkill /PID <numero-do-pid> /F
+```
+
+Ou simplesmente mude a porta no `.env` (`PORT=3200`) e rode de novo. O launcher detecta a porta do `.env` automaticamente.
+
+**8. Recompilar ou usar o fluxo manual.**
+Se o `.exe` sumiu, foi corrompido ou não há como liberá-lo, recompile (recria o arquivo na raiz):
+
+```bat
+powershell -ExecutionPolicy Bypass -File launcher\build-exe.ps1
+```
+
+Se o `csc.exe` não for encontrado, instale o .NET Framework 4.8 ou pule esta etapa e use o `.bat`. Último recurso, sem launcher nenhum:
+
+```bash
+npm install
+npm run setup
+npm start
+```
+
+Ao pedir ajuda, informe: versão do Windows, `node -v`, a saída de `launcher\TubeGrab.bat` (as últimas linhas) e se o projeto veio de `git clone` ou de ZIP.
 
 ## Uso
 
@@ -232,7 +346,17 @@ O navegador precisa estar na mesma máquina do servidor. Se o app roda em outro 
 Pare o servidor e apague `storage/`, `data/` e `logs/`. Eles são recriados sozinhos.
 
 **Porta 3100 ocupada.**
-Mude no `.env`: `PORT=3200`.
+Feche o console antigo do TubeGrab. Se não souber qual é:
+
+```bat
+netstat -ano | findstr :3100
+taskkill /PID <numero-do-pid> /F
+```
+
+Ou mude no `.env`: `PORT=3200`.
+
+**Windows: o `TubeGrab.exe` não abre, fecha na hora ou mostra erro.**
+Rode `launcher\TubeGrab.bat` num terminal para ver a mensagem e siga a seção [Se o executável não funcionar](#se-o-executável-não-funcionar), dentro de *Windows: um clique*.
 
 ---
 
