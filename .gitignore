@@ -5,4 +5,5 @@ data/
 logs/
 .env
 cookies.txt
+# atalhos .lnk criados localmente (o ponto de entrada versionado e o TubeGrab.exe)
 TubeGrab.lnk

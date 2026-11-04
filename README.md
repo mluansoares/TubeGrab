@@ -45,9 +45,9 @@ Abra **http://localhost:3100**.
 
 No dia a dia, só `npm start` é necessário.
 
-### Windows: duplo clique (sem terminal)
+### Windows: um clique (sem terminal)
 
-Na raiz do projeto fica **`TubeGrab.lnk`** — o único arquivo do launcher que você precisa ver. Ele aponta para **`launcher\TubeGrab.bat`**, que guarda o script e o ícone (`launcher\TubeGrab.ico`). Um duplo clique faz tudo:
+Na raiz do projeto fica **`TubeGrab.exe`** — é o ponto de entrada. Um duplo clique faz tudo:
 
 1. confere Node.js e npm (se faltar — ou se for anterior ao 22.5 — instala o LTS via `winget`, com fallback para o instalador oficial do nodejs.org);
 2. roda `npm install` se as dependências ainda não estiverem em `node_modules/`;
@@ -55,11 +55,35 @@ Na raiz do projeto fica **`TubeGrab.lnk`** — o único arquivo do launcher que 
 4. sobe o servidor com `npm start`;
 5. abre o navegador padrão em `http://localhost:<PORT>` assim que a porta responde.
 
-O script roda sempre a partir da raiz do projeto (`cd /d "%~dp0.."`), então `node_modules/`, `bin/` e `.env` são encontrados mesmo estando em `launcher/`.
+O `.exe` é um launcher fino (~20 KB): não duplica lógica, apenas abre **`launcher\TubeGrab.bat`** via ShellExecute — exatamente o que um duplo clique no `.bat` faria. O script faz `cd /d "%~dp0.."`, então `node_modules/`, `bin/` e `.env` são encontrados mesmo ele estando em `launcher/`. O ícone e os metadados (produto/versão) estão embutidos no binário e não há caminho absoluto: o repositório funciona em qualquer pasta. Se o `.bat` não estiver ao lado, o `.exe` mostra um aviso e sai com código 1.
+
+O `.bat` continua executável sozinho — útil em servidor/CI ou se o `.exe` for bloqueado por política de máquina.
 
 A porta sai do `.env` (`3100` se o arquivo não existir). Se o app já estiver rodando, o script apenas abre o navegador em vez de subir uma segunda instância. A espera pela porta roda em segundo plano, então o `npm start` não fica bloqueado.
 
-> No Windows um `.bat` não aceita ícone embutido: quem mostra o `TubeGrab.ico` é o atalho `TubeGrab.lnk`. Se o Explorer insistir no ícone genérico, tecle **F5** na pasta ou rode `ie4uinit.exe -show` para limpar o cache. O `.lnk` guarda caminho absoluto — se mover a pasta, recrie o atalho ou execute `launcher\TubeGrab.bat` direto.
+#### Antivírus, SmartScreen e como recompilar
+
+O binário é gerado a partir de `launcher\TubeGrabLauncher.cs` (código aberto, ~40 linhas) e é commitado junto do script de build. Não há ofuscação, empacotamento, janela oculta nem comando montado em string — justamente o que costuma disparar heurísticas. Ainda assim:
+
+- **`git clone`** não aplica *Mark of the Web*: normalmente abre direto.
+- **ZIP baixado do GitHub** marca os arquivos; o Windows pode mostrar *"O Windows protegeu o computador"* → **Mais informações → Executar assim mesmo**.
+- Um antivírus pode implicar com qualquer `.exe` pequeno e não assinado. Se acontecer, use `launcher\TubeGrab.bat` (mesmo comportamento) ou adicione uma exclusão para a pasta do projeto.
+- Binário **não assinado**: não há certificado de code signing. Assinar resolveria o SmartScreen, mas exige certificado pago.
+
+Para recompilar (não precisa de SDK, Visual Studio nem internet — usa o `csc.exe` do .NET Framework que já vem no Windows 10/11):
+
+```bat
+powershell -ExecutionPolicy Bypass -File launcher\build-exe.ps1
+```
+
+Para auditar o binário commitado:
+
+```
+SHA-256  4D98A0280C9F51A494ED2B84ED688D1B0029118CE450BEFDD04A43C5EDC36815
+tamanho  19.968 bytes
+```
+
+> Esse hash vale para o binário atual do repositório. Se você recompilar, o seu será diferente — o script imprime o resultado. Dá para conferir o hash publicado aqui com o do seu arquivo (ou enviá-lo ao VirusTotal) antes de executar.
 
 ## Uso
 
@@ -115,7 +139,9 @@ O navegador vai pedir o token uma vez e guardá-lo. Sem `ACCESS_TOKEN`, qualquer
 | `npm run setup` | Baixa/verifica `yt-dlp` e `ffmpeg` em `bin/`. |
 | `npm run update:ytdlp` | Atualiza só o `yt-dlp`. |
 | `npm test` | Roda os testes unitários. |
-| `launcher\TubeGrab.bat` | Windows: faz os passos de instalação/atualização e sobe o app com um duplo clique (`TubeGrab.lnk`, na raiz, é o atalho com ícone). |
+| `TubeGrab.exe` | Windows: ponto de entrada de um clique — abre o `.bat` abaixo (com ícone e metadados embutidos). |
+| `launcher\build-exe.ps1` | Recompila o `TubeGrab.exe` com o `csc.exe` do .NET Framework (sem SDK). |
+| `launcher\TubeGrab.bat` | Windows: faz os passos de instalação/atualização e sobe o app; executável sozinho, sem o `.exe`. |
 
 ---
 
@@ -130,8 +156,8 @@ src/ytdlp.js     wrapper do yt-dlp: metadados, download, erros humanos
 src/db.js        SQLite nativo do Node (node:sqlite), sem dependência nativa
 src/urls.js      validação estrita de links e nomes de arquivo seguros
 scripts/         download dos binários
-launcher/        TubeGrab.bat + TubeGrab.ico (o atalho aponta para cá)
-TubeGrab.lnk     atalho na raiz, com ícone, que executa o launcher (não versionado)
+launcher/        TubeGrab.bat + TubeGrab.ico + fonte e build do launcher
+TubeGrab.exe     launcher de um clique na raiz (ícone embutido, versionado)
 bin/             yt-dlp, ffmpeg, ffprobe (não versionado)
 storage/videos/  arquivos baixados (não versionado)
 data/            banco SQLite (não versionado)
